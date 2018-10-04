@@ -28,8 +28,7 @@ define([ 'jquery',
         const SPLUNK_DASHBOARD_CANCEL_BUTTON = '.btn.default.edit-cancel';
         const GRIDSIZE = 10;
 
-
-        var panel_id;
+        var panel_id = null;
 
         var loaded = false;
         var loading = false;
@@ -75,7 +74,8 @@ define([ 'jquery',
         });
 
         $(document).on('click', SPLUNK_DASHBOARD_EDIT_BUTTON, function() {
-            handleEditMode();
+            //handleEditMode();
+            edit_mode == 1;
             edit_interactive = true;
         });
 
@@ -92,14 +92,16 @@ define([ 'jquery',
         return SplunkVisualizationBase.extend({
             initialize: function() {
                 this.$el = $(this.el);
+
                 chart = document.createElement("div");
                 chart.className = "splunk-flowchart";
+                this.el.appendChild(chart);
                 edit = document.createElement("div");
                 edit.className = "splunk-flowchart-stencil";
                 this.el.appendChild(edit);
-                this.el.appendChild(chart);
 
                 initPaper(this.el.getElementsByClassName('splunk-flowchart'));
+
                 initStencilPaper(this.el.getElementsByClassName('splunk-flowchart-stencil'));
 
 	        panel_id = $('.dashboard-cell.dashboard-layout-panel').attr('id');
@@ -108,8 +110,6 @@ define([ 'jquery',
                     edit_interactive = false;
 
                 loadDiagram(graph, paper);
-                if (edit_mode == 1) 
-                    handleEditMode();
 
 		graph.on('add', function(link) {
                     if (link.attributes.type === 'flowchart.Link') {
@@ -259,7 +259,6 @@ define([ 'jquery',
                     loaded = false;
                     loading = false;
                 }
-                setInteractive(edit_interactive);
             },
 
             updateView: function(data, config) {
@@ -449,7 +448,6 @@ define([ 'jquery',
     }
 
     function loadDiagram(graph, paper) {
-	//panel_id = $('.dashboard-cell.dashboard-layout-panel').attr('id');
         search_str = '|inputlookup flowchart_kv|eval k=_key|where k="' + panel_id + '"|table defs';
         search.set({search:  search_str});
         search.startSearch();
@@ -462,7 +460,9 @@ define([ 'jquery',
                 graph_str = results.data().rows[0][0];
                 graph.fromJSON(JSON.parse(graph_str));
                 setInteractive(edit_interactive);
-                
+                if (edit_mode == 1) {
+                    handleEditMode();
+                }
                 loaded = true;
             }
         });
