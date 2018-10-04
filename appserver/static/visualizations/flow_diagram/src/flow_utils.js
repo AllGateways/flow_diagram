@@ -7,6 +7,8 @@ define([
         _,
         jointjs
     ) {
+        const BACKGROUND_COLOR = '#42b9f4';
+
         jointjs.dia.Link.define('flowchart.Link', {
             attrs: {
                 line: {
@@ -16,10 +18,16 @@ define([
                     strokeLinejoin: 'round',
                     targetMarker: {
                         'type': 'path',
-                        'd': 'M 7 -3 0 0 7 3 z'
-                        //'d': 'M 5 -2 0 0 5 2 z'
+                        'd': 'M 7 -3.5 0 0 7 3.5 z',
+                         stroke: 'white',
+                         strokeWidth: 0.5,
+                         fill: 'black',
                     },
-		    z: -1
+		    z: -1,
+                    connectionPoint: {
+                        name: 'bbox',
+                        args: {stroke: true},
+                    }
                 },
                 wrapper: {
                     connection: true,
@@ -40,134 +48,136 @@ define([
                 selector: 'line',
                 attributes: {
                     'fill': 'none',
-                    //'pointer-events': 'none'
                 }
             }]
         });
 
-
-        jointjs.dia.Element.define('flowchart.Edit', {
+        const PROCESS_SIZE = 65;
+        const PROCESS_RADIUS_SIZE = 3;
+        const PROCESS_D = '' +
+            'M ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' 0 ' +
+            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + PROCESS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' ' +
+            'L ' + PROCESS_SIZE + ' ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' ' + 
+            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' ' + PROCESS_SIZE + ' ' +
+            'L ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_SIZE + ' ' +
+            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + 0 + ' ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' ' + 
+            'L ' + 0 + ' ' + PROCESS_RADIUS_SIZE + ' ' +
+            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + PROCESS_RADIUS_SIZE + ' ' + 0 + ' ' +
+            'z'
+            
+        jointjs.dia.Element.define('flowchart.Process', {
             attrs: {
-                body: {
-                    refWidth: 10,
-                    refHeight: 65,
+                border: {
+                    connection: true,
+                    strokeWidth: 4,
+	            stroke: BACKGROUND_COLOR,
+	            fill: 'none',
+                    strokeLineJoin: 'round',
+		    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+                    d: PROCESS_D,
+                    zIndex: 100,
+                    magnet: true,
+                    cursor: 'pointer',
+                },
+	        body: {
+                    connection: true,
                     strokeWidth: 0,
-                    fill: 'lightgray',
+	            fill: BACKGROUND_COLOR,
+                    strokeLineJoin: 'round',
+                    d: PROCESS_D,
+                    zIndex: 5,
+	        },
+                label: {
+                    text: 'name me',
+                    textVerticalAnchor: 'middle',
+                    textAnchor: 'middle',
+                    ref: 'body',
+                    refX: (PROCESS_SIZE + 1) / 2,
+                    refY: (PROCESS_SIZE + 1) / 2,
+                    fontSize: 12,
+                    fill: 'white',
+                    'cursor': 'default',
+                },
+                data: {
+                    text: '',
+                    textVerticalAnchor: 'middle',
+                    textAnchor: 'middle',
+                    ref: 'body',
+                    refX: (PROCESS_SIZE + 1) / 2,
+                    refY: (PROCESS_SIZE + 1) / 2 + 20,
+                    fontSize: 10,
+                    fill: 'white',
+                    'cursor': 'default',
                 },
             },
             markup: [{
-                tagName: 'rect',
-                selector: 'body',
-            }]
-        });
-
-	jointjs.dia.Element.define('flowchart.Rectangle', {
-	    attrs: {
-	        border: {
-                    event: 'element:border:mouseenter',
-	            refWidth: 65,
-	            refHeight: 65,
-		    rx: 5,
-		    ry: 5,
-	            strokeWidth: 0,
-	            fill: '#12b9f4',
-		    filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
-		    magnet: true,
-		    cursor: 'pointer',
-	        },
-	        body: {
-	            refWidth: 56,
-	            refHeight: 56,
-		    refX: 5,
-		    refY: 5,
-		    rx: 5,
-		    ry: 5,
-	            strokeWidth: 0,
-	            stroke: '#222222',
-	            fill: '#42b9f4',
-	        },
-	        label: {
-		    text: 'name me',
-	            textVerticalAnchor: 'middle',
-	            textAnchor: 'middle',
-	            refX: 33,
-	            refY: 33,
-	            fontSize: 12,
-	            //fill: '#223333',
-	            fill: 'white',
-                    'cursor': 'default',
-	        },
-	        data: {
-		    text: '',
-	            textVerticalAnchor: 'middle',
-	            textAnchor: 'middle',
-	            refX: 33,
-	            refY: 53,
-	            fontSize: 10,
-	            //fill: '#223333',
-	            fill: 'white',
-                    'cursor': 'default',
-	        },
-	    },
-    	    markup: [{
-                tagName: 'rect',
+                tagName: 'path',
                 selector: 'border',
-    	    }, {
-                tagName: 'rect',
+            }, {
+                tagName: 'path',
                 selector: 'body',
-    	    }, {
+            }, {
                 tagName: 'text',
-                selector: 'label'
-    	    }, {
+                selector: 'label',
+            }, {
                 tagName: 'text',
                 selector: 'data'
             }]
-	});
+        });
 
+        const DECISION_SIZE = 50;
+        const DECISION_DIAG = Math.sqrt(DECISION_SIZE*DECISION_SIZE*2);
+        const RADIUS_SIZE = 3;
+        const DECISION_RADIUS_SIZE = Math.sqrt(RADIUS_SIZE*RADIUS_SIZE/2);
+        const DECISION_RADIUS_OFFSET = Math.sqrt(RADIUS_SIZE*RADIUS_SIZE*2);
+        const DECISION_D = '' + 
+            'M ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + DECISION_RADIUS_SIZE + ' ' + 
+            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + DECISION_RADIUS_SIZE + ' ' + 
+            'L ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + 
+            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + 
+            'L ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + 
+            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + 
+            'L ' + (DECISION_DIAG / 2 - DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + 
+            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (0 + DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + 
+            'z';
 
-        jointjs.dia.Element.define('flowchart.Diamond', {
+        jointjs.dia.Element.define('flowchart.Decision', {
             attrs: {
                 border: {
-                    refWidth: 50,
-                    refHeight: 50,
-                    rx: 0,
-                    ry: 0,
-                    strokeWidth: 0,
-                    fill: '#12b9f4',
-                    filter: { name: 'dropShadow', args: { dx: 1, dy: 0, blur: 1, color: '#223322' } },
+                    connection: true,
+                    strokeWidth: 4,
+	            stroke: BACKGROUND_COLOR,
+	            fill: 'none',
+		    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+                    d: DECISION_D,
+                    zIndex: 1,
                     magnet: true,
-		    transform: 'rotate(45)',
                     cursor: 'pointer',
                 },
                 body: {
-                    refWidth: 42,
-                    refHeight: 42,
-                    refX: 1,
-                    refY: 6,
-                    rx: 0,
-                    ry: 0,
-                    strokeWidth: 0,
-                    stroke: '#222222',
-                    fill: '#42b9f4',
-		    transform: 'rotate(45)'
+                    ref: 'border',
+                    connection: true,
+	            fill: BACKGROUND_COLOR,
+                    d: DECISION_D,
+                    zIndex: 5,
                 },
                 label: {
                     text: 'name me',
                     textVerticalAnchor: 'middle',
                     textAnchor: 'middle',
-                    refX: 1,
-                    refY: 36,
-	            fontSize: 12,
-                    //fill: '#223333',
+                    ref: 'body',
+                    refX: DECISION_DIAG/2,
+                    refY: DECISION_DIAG/2,
+                    fontSize: 12,
                     fill: 'white',
                     'cursor': 'default',
                 }
             },
             markup: [{
-                tagName: 'rect',
+                tagName: 'path',
                 selector: 'border',
             }, {
-                tagName: 'rect',
+                tagName: 'path',
                 selector: 'body',
             }, {
                 tagName: 'text',
@@ -175,39 +185,69 @@ define([
             }]
         });
 
-
-        jointjs.dia.Element.define('flowchart.Circle', {
+        STATE_RADIUS = 25;
+        STATE_D = '' +
+            /*'M ' + 0 + ' ' + STATE_RADIUS + ' ' + 
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + 0 + ' ' + 
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS*2 + ' ' + STATE_RADIUS + ' ' +
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + STATE_RADIUS*2 + ' ' +
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + 0 + ' ' + STATE_RADIUS + ' ' +
+            'z'*/
+            'M ' + STATE_RADIUS + ' ' + 0 + ' ' + 
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS*2 + ' ' + STATE_RADIUS + ' ' + 
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + STATE_RADIUS*2 + ' ' +
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + 0 + ' ' + STATE_RADIUS + ' ' +
+            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + 0 + ' ' +
+            'z'
+        jointjs.dia.Element.define('flowchart.State', {
             attrs: {
                 border: {
-                    r: 25,
-                    fill: '#42b9f4',
-                    filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+                    /*r: STATE_RADIUS,
+                    strokeWidth: 4,
+                    stroke: BACKGROUND_COLOR,
+                    fill: 'none',
+                    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+                    magnet: true,
+                    cursor: 'pointer',
+                    zIndex: 1,*/
+                    connection: true,
+                    strokeWidth: 4,
+	            stroke: BACKGROUND_COLOR,
+	            fill: 'none',
+		    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+                    d: STATE_D,
+                    zIndex: 1,
                     magnet: true,
                     cursor: 'pointer',
                 },
                 body: {
-                    r: 21,
-                    refCX: 16,
-                    refCY: 2,
-                    fill: '#42b9f4',
+                    /*ref: 'border',
+                    r: STATE_RADIUS,
+                    fill: BACKGROUND_COLOR,
+                    zIndex: 5,*/
+                    ref: 'border',
+                    connection: true,
+	            fill: BACKGROUND_COLOR,
+                    d: STATE_D,
+                    zIndex: 5,
                 },
                 label: {
                     text: 'name me',
                     textVerticalAnchor: 'middle',
                     textAnchor: 'middle',
-                    refX: 0,
-                    refY: 0,
+                    ref: 'body',
+                    refX: (STATE_RADIUS*2 + 1) / 2,
+                    refY: (STATE_RADIUS*2 + 1) / 2,
 	            fontSize: 12,
-                    //fill: '#223333',
                     fill: 'white',
                     'cursor': 'default',
                 }
             },
             markup: [{
-                tagName: 'circle',
+                tagName: 'path',
                 selector: 'border',
             }, {
-                tagName: 'circle',
+                tagName: 'path',
                 selector: 'body',
             }, {
                 tagName: 'text',
