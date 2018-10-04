@@ -74,8 +74,7 @@ define([ 'jquery',
         });
 
         $(document).on('click', SPLUNK_DASHBOARD_EDIT_BUTTON, function() {
-            //handleEditMode();
-            edit_mode == 1;
+            handleEditMode();
             edit_interactive = true;
         });
 
