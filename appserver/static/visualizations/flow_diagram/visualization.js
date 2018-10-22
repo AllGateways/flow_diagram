@@ -63,25 +63,30 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	        flow_utils
 	    ){
 	        const SPLUNK_DASHBOARD_EDIT_BUTTON = '.btn.edit-btn';
+	        const SPLUNK_DASHBOARD_UI_BUTTON = '.btn.edit-ui';
+	        const SPLUNK_DASHBOARD_UI_BUTTON_ACTIVE = '.btn.edit-ui.active';
+	        const SPLUNK_DASHBOARD_SOURCE_BUTTON = '.btn.edit-source';
+	        const SPLUNK_DASHBOARD_SOURCE_BUTTON_ACTIVE = '.btn.edit-source.active';
 	        const SPLUNK_DASHBOARD_SAVE_BUTTON = '.btn.btn-primary.edit-done';
 	        const SPLUNK_DASHBOARD_SAVE_BUTTON_INACTIVE = SPLUNK_DASHBOARD_SAVE_BUTTON + '.disabled';
 	        const SPLUNK_DASHBOARD_SAVE_BUTTON_ACTIVE = SPLUNK_DASHBOARD_SAVE_BUTTON + ':not(.disabled)';
 	        const SPLUNK_DASHBOARD_CANCEL_BUTTON = '.btn.default.edit-cancel';
 	        const GRIDSIZE = 10;
 
+	        var panel_id = null;
 
 	        var loaded = false;
 	        var loading = false;
 	        var edit_mode = 0;
 	        var edit_dirty = 0;
 	        var edit_update = 0;
-	        var edit_interactive = false;
+	        var edit_interactive = null;
 
 	        var clicked_link = null;
-	        var graph;
-	        var paper;
-	        var stencilGraph;
-	        var stencilPaper;
+	        var graph = null;
+	        var paper = null;
+	        var stencilGraph = null;
+	        var stencilPaper = null;
 
 	        var draw_mode = 0;
 	        var resize_mode = 0;
@@ -103,6 +108,16 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	             latest_time: "now"
 	        });
 
+	        $(document).on('click', SPLUNK_DASHBOARD_UI_BUTTON_ACTIVE, function() {
+	            edit_mode = 1;
+	            edit_interactive = true;
+	        });
+
+	        $(document).on('click', SPLUNK_DASHBOARD_SOURCE_BUTTON, function() {
+	            handleEditSource();
+	            edit_interactive = true;
+	        });
+
 	        $(document).on('click', SPLUNK_DASHBOARD_EDIT_BUTTON, function() {
 	            handleEditMode();
 	            edit_interactive = true;
@@ -121,17 +136,23 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	        return SplunkVisualizationBase.extend({
 	            initialize: function() {
 	                this.$el = $(this.el);
+
 	                chart = document.createElement("div");
 	                chart.className = "splunk-flowchart";
+	                this.el.appendChild(chart);
 	                edit = document.createElement("div");
 	                edit.className = "splunk-flowchart-stencil";
 	                this.el.appendChild(edit);
-	                this.el.appendChild(chart);
 
 	                initPaper(this.el.getElementsByClassName('splunk-flowchart'));
+
 	                initStencilPaper(this.el.getElementsByClassName('splunk-flowchart-stencil'));
 
-	                edit_interactive = false;
+		        panel_id = $('.dashboard-cell.dashboard-layout-panel').attr('id');
+
+	                if (edit_interactive == null)
+	                    edit_interactive = false;
+
 	                loadDiagram(graph, paper);
 
 			graph.on('add', function(link) {
@@ -272,13 +293,13 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	            },
 	  
 	            reflow: function() {
-	                if (loading == false) {
+	                if (loading == false || edit_dirty == 1) {
 	                    loadDiagram(graph, paper);
-	                }
-	                if (loaded == false) {
 	                    this.invalidateReflow();
-	                } else {
-	                    setInteractive(edit_interactive);
+	                }
+	                if (loading == true && loaded == false) {
+	                    this.invalidateReflow();
+	                } else if (loaded == true || loading == false) {
 	                    loaded = false;
 	                    loading = false;
 	                }
@@ -471,19 +492,21 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	    }
 
 	    function loadDiagram(graph, paper) {
-		panel_id = $('.dashboard-cell.dashboard-layout-panel').attr('id');
 	        search_str = '|inputlookup flowchart_kv|eval k=_key|where k="' + panel_id + '"|table defs';
 	        search.set({search:  search_str});
 	        search.startSearch();
 	        loading = true;
+	        loaded = false;
 	        results = search.data('results');
 
-	        results.on("data", () => {
+	        results.on("data", function () {
 	            if (results.hasData()) {
 	                graph_str = results.data().rows[0][0];
 	                graph.fromJSON(JSON.parse(graph_str));
-	                setInteractive(false);
-	                
+	                setInteractive(edit_interactive);
+	                if (edit_mode == 1) {
+	                    handleEditMode();
+	                }
 	                loaded = true;
 	            }
 	        });
@@ -492,7 +515,6 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	    function saveDiagram(graph) {
 	        flow_str = JSON.stringify(graph.toJSON());
 	        flow_str = flow_str.replace(/\"/g, "\\\"");
-		panel_id = $('.dashboard-cell.dashboard-layout-panel').attr('id');
 	        search_str = '|makeresults| eval id=\"' + panel_id + '\"|eval _key=id|eval defs=\"' + flow_str + '\"|outputlookup append=t flowchart_kv';
 	        update.set({search:  search_str});
 	        update.startSearch();
@@ -520,6 +542,10 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	                }
 	            }
 	        });
+
+	        paper.el.style.borderTop = 'solid';
+	        paper.el.style.borderWidth = '0.5px';
+	        paper.el.style.borderColor= 'lightgray';
 	    }
 
 	    function initStencilPaper(el) {
@@ -528,15 +554,24 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	            background: {
 	                color: '#ffffff'
 	            },
-	            opacity: 0.2,
 	            el: el,
-	            height: 40,
-	            width: '100%',
+	            //height: 40,
+	            //width: '100%',
 	            model: stencilGraph,
 	            interactive: false
 	        });
 
 	        stencilPaper.scale(0.5);
+	        stencilPaper.el.style.display = 'none';
+	        stencilPaper.el.style.border = 'solid';
+	        stencilPaper.el.style.borderWidth = '0.5px';
+	        stencilPaper.el.style.borderColor= 'lightgray';
+	        stencilPaper.el.style.position= 'absolute';
+	        stencilPaper.el.style.right= '5px';
+	        stencilPaper.el.style.top= '5px';
+	        stencilPaper.el.style.float= 'right';
+	        stencilPaper.el.style.zIndex= '3';
+	        stencilPaper.el.style.backgroundColor= 'rgba(230, 230, 230, 0.1)';
 	    }
 
 	    function removeNode(elem) {
@@ -749,13 +784,14 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	    function setLinkValue(link, value) {
 	        color = getColor(value);
 	        link.attr('line/stroke', color);
+	        link.attr('line/targetMarker/fill', color);
 	        link.attr('line/strokeWidth', '0.5');
 	    }
 
 	    function setElementValue(elem, value) {
 	        color = getColor(value);
 	        elem.attr('body/fill', color);
-	        elem.attr('border/fill', color);
+	        elem.attr('border/stroke', color);
 	        elem.attr('data/text', getData(value));
 	    }
 
@@ -766,30 +802,33 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	        return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
 	    }
 
+	    function handleEditSource() {
+	        saveDiagram(graph);
+	    }
+
 	    function handleEditCancel() {
+	        stencilPaper.el.style.display = 'none';
 	        edit_mode = 0;
 	        removeLinkTool();
 	        stencilGraph.clear();
-	        //setInteractive(false);
 	    }
 
 	    function handleEditSave() {
-	        //if (edit_mode == 1) {
-	            edit_mode = 0;
+	        stencilPaper.el.style.display = 'none';
+	        edit_mode = 0;
 
-	            if (edit_dirty == 1) {
-	                saveDiagram(graph);
-	                edit_dirty = 0;
-	            }
+	        if (edit_dirty == 1) {
+	            saveDiagram(graph);
+	            edit_dirty = 0;
+	        }
 
-	            removeLinkTool();
-	            stencilGraph.clear();
-	            //setInteractive(false);
-	        //}
+	        removeLinkTool();
+	        stencilGraph.clear();
 	    }
 
 	    function handleEditMode() {
 	        edit_mode = 1;
+	        stencilPaper.el.style.display = 'block';
 	        _.each(graph.getLinks(), function(link) {
 	            if (link.attributes['flow-id']) {
 	                link.label(0, {attrs: {source_value: {fill: 'black'}}});
@@ -801,28 +840,29 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	            }
 	        })
 
-	        var r2 = new jointjs.shapes.flowchart.Rectangle({
+	        var r2 = new jointjs.shapes.flowchart.Process({
 	            position: {
-	                x: 35,
-	                y: 5
+	                x: 30,
+	                y: 20 
 	            }
 	        });
 
-	        var r3 = new jointjs.shapes.flowchart.Diamond({
+	        var r3 = new jointjs.shapes.flowchart.Decision({
 	            position: {
-	                x: 165,
-	                y: 3
+	                x: 120,
+	                y: 18
 	            }
 	        });
 
-	        var r4 = new jointjs.shapes.flowchart.Circle({
+	        var r4 = new jointjs.shapes.flowchart.State({
 	            position: {
-	                x: 255,
-	                y: 41
+	                x: 217,
+	                y: 29 
 	            }
 	        });
 	        stencilGraph.addCells([r2, r3, r4]);
-	        //setInteractive(true);
+	        stencilPaper.fitToContent({padding: 10});
+	        stencilPaper.el.style.display = 'block';
 
 	        edit_update = 1;
 	    }
@@ -41845,6 +41885,8 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	        _,
 	        jointjs
 	    ) {
+	        const BACKGROUND_COLOR = '#42b9f4';
+
 	        jointjs.dia.Link.define('flowchart.Link', {
 	            attrs: {
 	                line: {
@@ -41854,10 +41896,16 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	                    strokeLinejoin: 'round',
 	                    targetMarker: {
 	                        'type': 'path',
-	                        'd': 'M 7 -3 0 0 7 3 z'
-	                        //'d': 'M 5 -2 0 0 5 2 z'
+	                        'd': 'M 7 -3.5 0 0 7 3.5 z',
+	                         stroke: 'white',
+	                         strokeWidth: 0.5,
+	                         fill: 'black',
 	                    },
-			    z: -1
+			    z: -1,
+	                    connectionPoint: {
+	                        name: 'bbox',
+	                        args: {stroke: true},
+	                    }
 	                },
 	                wrapper: {
 	                    connection: true,
@@ -41878,134 +41926,136 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	                selector: 'line',
 	                attributes: {
 	                    'fill': 'none',
-	                    //'pointer-events': 'none'
 	                }
 	            }]
 	        });
 
-
-	        jointjs.dia.Element.define('flowchart.Edit', {
+	        const PROCESS_SIZE = 65;
+	        const PROCESS_RADIUS_SIZE = 3;
+	        const PROCESS_D = '' +
+	            'M ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' 0 ' +
+	            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + PROCESS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' ' +
+	            'L ' + PROCESS_SIZE + ' ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' ' + 
+	            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' ' + PROCESS_SIZE + ' ' +
+	            'L ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_SIZE + ' ' +
+	            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + 0 + ' ' + (PROCESS_SIZE - PROCESS_RADIUS_SIZE) + ' ' + 
+	            'L ' + 0 + ' ' + PROCESS_RADIUS_SIZE + ' ' +
+	            'A ' + PROCESS_RADIUS_SIZE + ' ' + PROCESS_RADIUS_SIZE + ' 0 0 1 ' + PROCESS_RADIUS_SIZE + ' ' + 0 + ' ' +
+	            'z'
+	            
+	        jointjs.dia.Element.define('flowchart.Process', {
 	            attrs: {
-	                body: {
-	                    refWidth: 10,
-	                    refHeight: 65,
+	                border: {
+	                    connection: true,
+	                    strokeWidth: 4,
+		            stroke: BACKGROUND_COLOR,
+		            fill: 'none',
+	                    strokeLineJoin: 'round',
+			    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+	                    d: PROCESS_D,
+	                    zIndex: 100,
+	                    magnet: true,
+	                    cursor: 'pointer',
+	                },
+		        body: {
+	                    connection: true,
 	                    strokeWidth: 0,
-	                    fill: 'lightgray',
+		            fill: BACKGROUND_COLOR,
+	                    strokeLineJoin: 'round',
+	                    d: PROCESS_D,
+	                    zIndex: 5,
+		        },
+	                label: {
+	                    text: 'name me',
+	                    textVerticalAnchor: 'middle',
+	                    textAnchor: 'middle',
+	                    ref: 'body',
+	                    refX: (PROCESS_SIZE + 1) / 2,
+	                    refY: (PROCESS_SIZE + 1) / 2,
+	                    fontSize: 12,
+	                    fill: 'white',
+	                    'cursor': 'default',
+	                },
+	                data: {
+	                    text: '',
+	                    textVerticalAnchor: 'middle',
+	                    textAnchor: 'middle',
+	                    ref: 'body',
+	                    refX: (PROCESS_SIZE + 1) / 2,
+	                    refY: (PROCESS_SIZE + 1) / 2 + 20,
+	                    fontSize: 10,
+	                    fill: 'white',
+	                    'cursor': 'default',
 	                },
 	            },
 	            markup: [{
-	                tagName: 'rect',
-	                selector: 'body',
-	            }]
-	        });
-
-		jointjs.dia.Element.define('flowchart.Rectangle', {
-		    attrs: {
-		        border: {
-	                    event: 'element:border:mouseenter',
-		            refWidth: 65,
-		            refHeight: 65,
-			    rx: 5,
-			    ry: 5,
-		            strokeWidth: 0,
-		            fill: '#12b9f4',
-			    filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
-			    magnet: true,
-			    cursor: 'pointer',
-		        },
-		        body: {
-		            refWidth: 56,
-		            refHeight: 56,
-			    refX: 5,
-			    refY: 5,
-			    rx: 5,
-			    ry: 5,
-		            strokeWidth: 0,
-		            stroke: '#222222',
-		            fill: '#42b9f4',
-		        },
-		        label: {
-			    text: 'name me',
-		            textVerticalAnchor: 'middle',
-		            textAnchor: 'middle',
-		            refX: 33,
-		            refY: 33,
-		            fontSize: 12,
-		            //fill: '#223333',
-		            fill: 'white',
-	                    'cursor': 'default',
-		        },
-		        data: {
-			    text: '',
-		            textVerticalAnchor: 'middle',
-		            textAnchor: 'middle',
-		            refX: 33,
-		            refY: 53,
-		            fontSize: 10,
-		            //fill: '#223333',
-		            fill: 'white',
-	                    'cursor': 'default',
-		        },
-		    },
-	    	    markup: [{
-	                tagName: 'rect',
+	                tagName: 'path',
 	                selector: 'border',
-	    	    }, {
-	                tagName: 'rect',
+	            }, {
+	                tagName: 'path',
 	                selector: 'body',
-	    	    }, {
+	            }, {
 	                tagName: 'text',
-	                selector: 'label'
-	    	    }, {
+	                selector: 'label',
+	            }, {
 	                tagName: 'text',
 	                selector: 'data'
 	            }]
-		});
+	        });
 
+	        const DECISION_SIZE = 50;
+	        const DECISION_DIAG = Math.sqrt(DECISION_SIZE*DECISION_SIZE*2);
+	        const RADIUS_SIZE = 3;
+	        const DECISION_RADIUS_SIZE = Math.sqrt(RADIUS_SIZE*RADIUS_SIZE/2);
+	        const DECISION_RADIUS_OFFSET = Math.sqrt(RADIUS_SIZE*RADIUS_SIZE*2);
+	        const DECISION_D = '' + 
+	            'M ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + DECISION_RADIUS_SIZE + ' ' + 
+	            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + DECISION_RADIUS_SIZE + ' ' + 
+	            'L ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + 
+	            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + 
+	            'L ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + 
+	            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG - DECISION_RADIUS_SIZE) + ' ' + 
+	            'L ' + (DECISION_DIAG / 2 - DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 + DECISION_RADIUS_SIZE) + ' ' + 
+	            'A ' + DECISION_RADIUS_OFFSET + ' ' + DECISION_RADIUS_OFFSET + ' 0 0 1 ' + (0 + DECISION_RADIUS_SIZE) + ' ' + (DECISION_DIAG / 2 - DECISION_RADIUS_SIZE) + ' ' + 
+	            'z';
 
-	        jointjs.dia.Element.define('flowchart.Diamond', {
+	        jointjs.dia.Element.define('flowchart.Decision', {
 	            attrs: {
 	                border: {
-	                    refWidth: 50,
-	                    refHeight: 50,
-	                    rx: 0,
-	                    ry: 0,
-	                    strokeWidth: 0,
-	                    fill: '#12b9f4',
-	                    filter: { name: 'dropShadow', args: { dx: 1, dy: 0, blur: 1, color: '#223322' } },
+	                    connection: true,
+	                    strokeWidth: 4,
+		            stroke: BACKGROUND_COLOR,
+		            fill: 'none',
+			    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+	                    d: DECISION_D,
+	                    zIndex: 1,
 	                    magnet: true,
-			    transform: 'rotate(45)',
 	                    cursor: 'pointer',
 	                },
 	                body: {
-	                    refWidth: 42,
-	                    refHeight: 42,
-	                    refX: 1,
-	                    refY: 6,
-	                    rx: 0,
-	                    ry: 0,
-	                    strokeWidth: 0,
-	                    stroke: '#222222',
-	                    fill: '#42b9f4',
-			    transform: 'rotate(45)'
+	                    ref: 'border',
+	                    connection: true,
+		            fill: BACKGROUND_COLOR,
+	                    d: DECISION_D,
+	                    zIndex: 5,
 	                },
 	                label: {
 	                    text: 'name me',
 	                    textVerticalAnchor: 'middle',
 	                    textAnchor: 'middle',
-	                    refX: 1,
-	                    refY: 36,
-		            fontSize: 12,
-	                    //fill: '#223333',
+	                    ref: 'body',
+	                    refX: DECISION_DIAG/2,
+	                    refY: DECISION_DIAG/2,
+	                    fontSize: 12,
 	                    fill: 'white',
 	                    'cursor': 'default',
 	                }
 	            },
 	            markup: [{
-	                tagName: 'rect',
+	                tagName: 'path',
 	                selector: 'border',
 	            }, {
-	                tagName: 'rect',
+	                tagName: 'path',
 	                selector: 'body',
 	            }, {
 	                tagName: 'text',
@@ -42013,39 +42063,69 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	            }]
 	        });
 
-
-	        jointjs.dia.Element.define('flowchart.Circle', {
+	        STATE_RADIUS = 25;
+	        STATE_D = '' +
+	            /*'M ' + 0 + ' ' + STATE_RADIUS + ' ' + 
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + 0 + ' ' + 
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS*2 + ' ' + STATE_RADIUS + ' ' +
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + STATE_RADIUS*2 + ' ' +
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + 0 + ' ' + STATE_RADIUS + ' ' +
+	            'z'*/
+	            'M ' + STATE_RADIUS + ' ' + 0 + ' ' + 
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS*2 + ' ' + STATE_RADIUS + ' ' + 
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + STATE_RADIUS*2 + ' ' +
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + 0 + ' ' + STATE_RADIUS + ' ' +
+	            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + 0 + ' ' +
+	            'z'
+	        jointjs.dia.Element.define('flowchart.State', {
 	            attrs: {
 	                border: {
-	                    r: 25,
-	                    fill: '#42b9f4',
-	                    filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+	                    /*r: STATE_RADIUS,
+	                    strokeWidth: 4,
+	                    stroke: BACKGROUND_COLOR,
+	                    fill: 'none',
+	                    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+	                    magnet: true,
+	                    cursor: 'pointer',
+	                    zIndex: 1,*/
+	                    connection: true,
+	                    strokeWidth: 4,
+		            stroke: BACKGROUND_COLOR,
+		            fill: 'none',
+			    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
+	                    d: STATE_D,
+	                    zIndex: 1,
 	                    magnet: true,
 	                    cursor: 'pointer',
 	                },
 	                body: {
-	                    r: 21,
-	                    refCX: 16,
-	                    refCY: 2,
-	                    fill: '#42b9f4',
+	                    /*ref: 'border',
+	                    r: STATE_RADIUS,
+	                    fill: BACKGROUND_COLOR,
+	                    zIndex: 5,*/
+	                    ref: 'border',
+	                    connection: true,
+		            fill: BACKGROUND_COLOR,
+	                    d: STATE_D,
+	                    zIndex: 5,
 	                },
 	                label: {
 	                    text: 'name me',
 	                    textVerticalAnchor: 'middle',
 	                    textAnchor: 'middle',
-	                    refX: 0,
-	                    refY: 0,
+	                    ref: 'body',
+	                    refX: (STATE_RADIUS*2 + 1) / 2,
+	                    refY: (STATE_RADIUS*2 + 1) / 2,
 		            fontSize: 12,
-	                    //fill: '#223333',
 	                    fill: 'white',
 	                    'cursor': 'default',
 	                }
 	            },
 	            markup: [{
-	                tagName: 'circle',
+	                tagName: 'path',
 	                selector: 'border',
 	            }, {
-	                tagName: 'circle',
+	                tagName: 'path',
 	                selector: 'body',
 	            }, {
 	                tagName: 'text',
