@@ -41899,7 +41899,7 @@ define(["splunkjs/mvc","splunkjs/mvc/searchmanager","api/SplunkVisualizationBase
 	                        'd': 'M 7 -3.5 0 0 7 3.5 z',
 	                         stroke: 'white',
 	                         strokeWidth: 0.5,
-	                         fill: 'red',
+	                         fill: 'black',
 	                    },
 			    z: -1,
 	                    connectionPoint: {
