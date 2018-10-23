@@ -1,5 +1,1 @@
-appserver/static/visualizations/flow_diagram/.DS_Store
-appserver/static/.DS_Store
-appserver/static/visualizations/.DS_Store
-node_modules/.*
-appserver/static/visualizations/flow_diagram/node_modules/.shrinkwrap.yaml
+**/.DS_Store
