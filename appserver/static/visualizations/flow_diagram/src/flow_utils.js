@@ -73,7 +73,6 @@ define([
                     stroke: BACKGROUND_COLOR,
                     fill: 'none',
                     strokeLineJoin: 'round',
-                    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
                     d: PROCESS_D,
                     zIndex: 100,
                     magnet: true,
@@ -148,7 +147,6 @@ define([
                     strokeWidth: 4,
                     stroke: BACKGROUND_COLOR,
                     fill: 'none',
-                    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
                     d: DECISION_D,
                     zIndex: 1,
                     magnet: true,
@@ -187,12 +185,6 @@ define([
 
         STATE_RADIUS = 25;
         STATE_D = '' +
-            /*'M ' + 0 + ' ' + STATE_RADIUS + ' ' + 
-            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + 0 + ' ' + 
-            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS*2 + ' ' + STATE_RADIUS + ' ' +
-            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + STATE_RADIUS*2 + ' ' +
-            'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + 0 + ' ' + STATE_RADIUS + ' ' +
-            'z'*/
             'M ' + STATE_RADIUS + ' ' + 0 + ' ' +
             'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS * 2 + ' ' + STATE_RADIUS + ' ' +
             'A ' + STATE_RADIUS + ' ' + STATE_RADIUS + ' 0 0 1 ' + STATE_RADIUS + ' ' + STATE_RADIUS * 2 + ' ' +
@@ -202,29 +194,16 @@ define([
         jointjs.dia.Element.define('flowchart.State', {
             attrs: {
                 border: {
-                    /*r: STATE_RADIUS,
-                    strokeWidth: 4,
-                    stroke: BACKGROUND_COLOR,
-                    fill: 'none',
-                    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
-                    magnet: true,
-                    cursor: 'pointer',
-                    zIndex: 1,*/
                     connection: true,
                     strokeWidth: 4,
                     stroke: BACKGROUND_COLOR,
                     fill: 'none',
-                    //filter: { name: 'dropShadow', args: { dx: 1, dy: 1, blur: 1, color: '#223322' } },
                     d: STATE_D,
                     zIndex: 1,
                     magnet: true,
                     cursor: 'pointer',
                 },
                 body: {
-                    /*ref: 'border',
-                    r: STATE_RADIUS,
-                    fill: BACKGROUND_COLOR,
-                    zIndex: 5,*/
                     ref: 'border',
                     connection: true,
                     fill: BACKGROUND_COLOR,
