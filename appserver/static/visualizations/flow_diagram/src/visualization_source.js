@@ -130,42 +130,6 @@ define(['jquery',
                     }
                 })
 
-                /*
-                
-                                paper.on('blank:pointerdown', function(e) {
-                                    draw_mode = 1;
-                                    startX = e.offsetX;
-                                    startY = e.offsetY;
-                                });
-                
-                                paper.on('blank:pointermove', function(e) {
-                                    if (draw_id == 0) {
-                                        draw_id = guidGenerator();
-                                    }
-                                    endX = e.offsetX;
-                                    endY = e.offsetY;
-                                    h = GRIDSIZE * Math.round((endY - startY) / GRIDSIZE);
-                                    w = GRIDSIZE * Math.round((endX - startX) / GRIDSIZE);
-                                    
-                                    if (draw_id != 0) {
-                                        removeCell(draw_id);
-                                    }
-                                    createCell(draw_id, startX, startY, w, h);
-                                });
-                
-                                paper.on('blank:pointerup', function(e) {
-                                    endX = e.offsetX;
-                                    endY = e.offsetY;
-                                    w = GRIDSIZE * Math.round((endX - startX) / GRIDSIZE);
-                                    h = GRIDSIZE * Math.round((endY - startY) / GRIDSIZE);
-                
-                                    removeCell(draw_id);
-                                    createCell(draw_id, startX, startY, w, h);
-                                    draw_mode = 0;
-                                });
-                */
-
-
                 paper.on('link:pointerclick', function (linkView, evt, x, y) {
                     if (edit_mode == 0)
                         return;
@@ -187,8 +151,6 @@ define(['jquery',
                 paper.on('element:pointerclick', function (evt, x, y) {
                     if (edit_mode == 0)
                         return;
-
-                    //removeLinkTool();
                 });
 
 
@@ -198,28 +160,6 @@ define(['jquery',
 
                     removeNode(elementView.model);
                 });
-
-                /*paper.on('element:mouseenter', function(elementView, evt, x, y) {
-                    if(edit_mode == 0)
-                        return;
-
-                    elementView.model.attr('border/fill', 'orange');
-                    removeLinkTool();
-                });
-
-                paper.on('element:mouseup', function(elementView) {
-                    if(edit_mode == 0)
-                        return;
-
-                    elementView.model.attr('border/fill', '#42b9f4');
-                });
-
-                paper.on('element:mouseleave', function(elementView) {
-                    if(edit_mode == 0)
-                        return;
-
-                    elementView.model.attr('border/fill', '#42b9f4');
-                });*/
 
                 paper.on('link:contextmenu', function (linkView, evt, x, y) {
                     if (edit_mode == 0)
@@ -510,8 +450,6 @@ define(['jquery',
                     color: '#ffffff'
                 },
                 el: el,
-                //height: 40,
-                //width: '100%',
                 model: stencilGraph,
                 interactive: false
             });
@@ -822,4 +760,3 @@ define(['jquery',
             edit_update = 1;
         }
     });
-
